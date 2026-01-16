@@ -3,11 +3,12 @@ import { ProfileData } from './types';
 
 export const INITIAL_DATA: ProfileData = {
   name: "장동천",
-  profileImageUrl: "https://picsum.photos/seed/pt-jang/800/1000",
+  // 사용자가 업로드한 사진을 profile.jpg로 저장한다고 가정합니다.
+  profileImageUrl: "./profile.jpg",
   headline: "움직임에 확신을 더하는\n물리치료사 장동천",
   subHeadline: "서울의료원 물리치료사 | KPNFA 학술 부장 및 실기 강사 | 이학석사(M.S.)",
-  philosophy: "저는 단순 암기식 교육이 아닌, 실제 임상 사례와 이론을 연결하여 실질적인 변화를 제공하는 교육과 치료를 추구합니다. 물리치료는 환자와 가장 밀접하게 소통하는 의료 분야인 만큼, 전문적 지식과 기술뿐만 아니라 사명감을 갖춘 치료사로서 환자의 독립적인 삶을 위해 헌신합니다.",
-  philosophyHighlight: "이론과 실제의 일치를 통해 환자에게 최선의 임상 결과를 제공합니다.",
+  philosophy: "저는 단순 암기식 교육이 아닌, 실제 임상 사례와 이론을 연결하여 실질적인 변화를 제공하는 교육과 치료를 추구합니다. 서울의료원에서의 풍부한 임상 경험을 바탕으로, 전문적 지식과 기술뿐만 아니라 사명감을 갖춘 치료사로서 환자의 독립적인 삶을 위해 헌신합니다.",
+  philosophyHighlight: "이론과 실제의 일치를 통해 환자에게 최고의 임상 결과를 제공합니다.",
   email: "sgpt1404@naver.com",
   phone: "010-7474-9803",
   expertise: [
@@ -17,8 +18,8 @@ export const INITIAL_DATA: ProfileData = {
     { label: "전문 분야", value: "신경/근골격" }
   ],
   experience: [
-    { id: "exp-1", year: "2024.04.01 ~ 현재", title: "서울의료원 재활의학팀", description: "신경계 운동치료, 수술 후 재활, 심폐 재활" },
-    { id: "exp-2", year: "2023.05.03 ~ 2024.03.31", title: "의정부 을지대학교병원 의료기사총괄부", description: "신경계 및 수술 후 재활" },
+    { id: "exp-1", year: "2024.04.01 ~ 현재", title: "서울의료원 재활의학팀", description: "신경계 운동치료, 수술 후 재활, 심폐 재활 및 중증 환자 관리" },
+    { id: "exp-2", year: "2023.05.03 ~ 2024.03.31", title: "의정부 을지대학교병원 의료기사총괄부", description: "신경계 및 수술 후 재활 전문 치료" },
     { id: "exp-3", year: "2020.08.05 ~ 2022.08.04", title: "건국대학교병원 재활의학팀", description: "신경계 운동치료, 수술 후 재활, 호흡 재활" },
     { id: "exp-4", year: "2019.03.01 ~ 2020.03.01", title: "삼육서울병원 재활의학팀", description: "신경계 운동치료, 수술 후 재활, 호흡 재활" }
   ],

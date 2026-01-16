@@ -9,70 +9,43 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
-  // 깊은 복사를 사용하여 초기 상태 설정
   const [localData, setLocalData] = useState<ProfileData>(() => JSON.parse(JSON.stringify(data)));
-  const [activeTab, setActiveTab] = useState<'general' | 'credentials' | 'portfolio' | 'cert-images'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'credentials' | 'portfolio' | 'cert-images' | 'guide'>('general');
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
   const certListInputRef = useRef<HTMLInputElement>(null);
   const [activePortfolioIdx, setActivePortfolioIdx] = useState<number | null>(null);
 
-  // --- 고유 ID 생성기 (삭제를 위해 매우 중요) ---
   const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-  // --- [핵심] 삭제 로직: ID 기반으로 필터링 ---
-  // 이 함수는 주어진 섹션에서 특정 ID를 가진 항목을 완벽하게 제거합니다.
   const handleRemoveById = (section: keyof ProfileData, id: string) => {
     if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
-    
     setLocalData(prev => {
       const currentList = prev[section];
       if (Array.isArray(currentList)) {
-        return {
-          ...prev,
-          [section]: currentList.filter((item: any) => item.id !== id)
-        };
+        return { ...prev, [section]: currentList.filter((item: any) => item.id !== id) };
       }
       return prev;
     });
   };
 
-  // --- 섹션 비우기 (초기화) ---
-  const handleClearSection = (section: keyof ProfileData) => {
-    if (!window.confirm('해당 섹션의 모든 내용을 삭제하시겠습니까?')) return;
-    setLocalData(prev => ({ ...prev, [section]: [] }));
-  };
-
-  // --- 항목 추가 로직 ---
   const handleAddItem = (section: 'experience' | 'education' | 'certifications' | 'portfolioItems') => {
     const newId = generateUniqueId(section);
     let newItem: any;
+    if (section === 'experience') newItem = { id: newId, year: '2024-현재', title: '새로운 경력', description: '업무 내용을 입력하세요.' };
+    else if (section === 'education') newItem = { id: newId, year: '2024', degree: '학위 명칭', institution: '교육 기관' };
+    else if (section === 'certifications') newItem = { id: newId, date: '2024.01', title: '자격 명칭', organization: '발행 기관' };
+    else if (section === 'portfolioItems') newItem = { id: newId, category: 'academic', title: '활동 제목', description: '활동 상세 설명', imageUrls: [], date: '2024' };
 
-    if (section === 'experience') {
-      newItem = { id: newId, year: '2024-현재', title: '새로운 경력', description: '업무 내용을 입력하세요.' };
-    } else if (section === 'education') {
-      newItem = { id: newId, year: '2024', degree: '학위 명칭', institution: '교육 기관' };
-    } else if (section === 'certifications') {
-      newItem = { id: newId, date: '2024.01', title: '자격 명칭', organization: '발행 기관' };
-    } else if (section === 'portfolioItems') {
-      newItem = { id: newId, category: 'academic', title: '활동 제목', description: '활동 상세 설명', imageUrls: [], date: '2024' };
-    }
-
-    setLocalData(prev => ({
-      ...prev,
-      [section]: [newItem, ...(prev[section] as any[])]
-    }));
+    setLocalData(prev => ({ ...prev, [section]: [newItem, ...(prev[section] as any[])] }));
   };
 
-  // --- 항목 업데이트 로직 ---
   const handleUpdateItemById = (section: string, id: string, field: string, value: string) => {
     setLocalData(prev => {
       const list = [...(prev[section as keyof ProfileData] as any[])];
       const targetIdx = list.findIndex(item => item.id === id);
-      if (targetIdx !== -1) {
-        list[targetIdx] = { ...list[targetIdx], [field]: value };
-      }
+      if (targetIdx !== -1) list[targetIdx] = { ...list[targetIdx], [field]: value };
       return { ...prev, [section]: list };
     });
   };
@@ -101,19 +74,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
       const newImages = await Promise.all(Array.from(files).map(f => readFile(f)));
       setLocalData(prev => {
         const items = [...prev.portfolioItems];
-        const currentId = items[activePortfolioIdx].id;
-        const idx = items.findIndex(it => it.id === currentId);
-        if (idx !== -1) {
-          items[idx].imageUrls = [...items[idx].imageUrls, ...newImages];
-        }
+        items[activePortfolioIdx].imageUrls = [...items[activePortfolioIdx].imageUrls, ...newImages];
         return { ...prev, portfolioItems: items };
       });
     }
   };
 
+  const downloadJson = () => {
+    const dataStr = "export const INITIAL_DATA = " + JSON.stringify(localData, null, 2) + ";";
+    const dataUri = 'data:application/javascript;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = 'constants.ts';
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
   return (
     <div className="flex h-screen bg-slate-900 text-white font-sans overflow-hidden">
-      {/* Sidebar */}
       <aside className="w-72 bg-slate-950 border-r border-white/5 flex flex-col shrink-0">
         <div className="p-8 border-b border-white/5">
           <h2 className="text-xl font-black text-teal-400 tracking-tighter uppercase">Portfolio CMS</h2>
@@ -123,7 +101,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
             { id: 'general', label: '기본 브랜딩' },
             { id: 'credentials', label: '경력 / 학업 / 자격' },
             { id: 'portfolio', label: '프로젝트 활동' },
-            { id: 'cert-images', label: '증명서 사본' }
+            { id: 'cert-images', label: '증명서 사본' },
+            { id: 'guide', label: '영구 저장 가이드 💡' }
           ].map(tab => (
             <button 
               key={tab.id} 
@@ -135,12 +114,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
           ))}
         </nav>
         <div className="p-6 border-t border-white/5 space-y-3">
-          <button onClick={() => { onUpdate(localData); alert('데이터가 저장되었습니다.'); onClose(); }} className="w-full py-4 bg-teal-500 text-white font-black rounded-2xl hover:bg-teal-400 active:scale-95 transition-all shadow-xl">전체 저장하기</button>
+          <button onClick={() => { onUpdate(localData); alert('브라우저에 임시 저장되었습니다.\n영구 반영을 위해 가이드 탭을 확인하세요!'); }} className="w-full py-4 bg-teal-500 text-white font-black rounded-2xl hover:bg-teal-400 active:scale-95 transition-all shadow-xl">임시 저장</button>
+          <button onClick={downloadJson} className="w-full py-3 bg-white/5 text-teal-400 border border-teal-500/20 text-xs font-black rounded-xl hover:bg-teal-500 hover:text-white transition-all">설정파일 다운로드(TS)</button>
           <button onClick={onClose} className="w-full py-2 text-slate-500 text-xs font-bold hover:text-white transition-colors">닫기</button>
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-12 bg-slate-900">
         <div className="max-w-4xl mx-auto space-y-10">
           
@@ -172,15 +151,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
           )}
 
           {activeTab === 'credentials' && (
-            <div className="space-y-12">
-              {/* Experience */}
+             <div className="space-y-12">
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-black">경력 사항</h3>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleClearSection('experience')} className="text-[10px] font-bold text-red-500 border border-red-500/10 px-3 py-2 rounded-xl hover:bg-red-500 hover:text-white transition-all">비우기</button>
-                    <button onClick={() => handleAddItem('experience')} className="bg-teal-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-teal-500">+ 추가</button>
-                  </div>
+                  <button onClick={() => handleAddItem('experience')} className="bg-teal-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-teal-500">+ 추가</button>
                 </div>
                 <div className="space-y-4">
                   {localData.experience.map((item) => (
@@ -195,119 +170,74 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                   ))}
                 </div>
               </div>
-
-              {/* Education */}
-              <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5">
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black">학업 사항</h3>
-                  <button onClick={() => handleAddItem('education')} className="bg-teal-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-teal-500">+ 추가</button>
-                </div>
-                <div className="space-y-4">
-                  {localData.education.map((item) => (
-                    <div key={item.id} className="relative p-6 bg-slate-900 rounded-2xl border border-white/5 group">
-                      <button onClick={() => handleRemoveById('education', item.id)} className="absolute top-4 right-4 bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-black">×</button>
-                      <div className="grid grid-cols-2 gap-4 mb-3">
-                        <input value={item.year} onChange={(e) => handleUpdateItemById('education', item.id, 'year', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-bold" />
-                        <input value={item.degree} onChange={(e) => handleUpdateItemById('education', item.id, 'degree', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 font-bold" />
-                      </div>
-                      <input value={item.institution} onChange={(e) => handleUpdateItemById('education', item.id, 'institution', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-slate-400" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Certifications */}
-              <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5">
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black">자격 및 면허</h3>
-                  <button onClick={() => handleAddItem('certifications')} className="bg-teal-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-teal-500">+ 추가</button>
-                </div>
-                <div className="space-y-3">
-                  {localData.certifications.map((item) => (
-                    <div key={item.id} className="relative p-4 bg-slate-900 rounded-2xl border border-white/5 flex gap-4 items-center group">
-                      <input value={item.date} onChange={(e) => handleUpdateItemById('certifications', item.id, 'date', e.target.value)} className="w-24 bg-slate-950 p-3 rounded-xl border border-white/10 text-xs text-orange-400 font-black" />
-                      <div className="flex-1">
-                        <input value={item.title} onChange={(e) => handleUpdateItemById('certifications', item.id, 'title', e.target.value)} className="w-full bg-slate-950 p-2 rounded-xl border border-white/10 font-bold text-sm" />
-                        <input value={item.organization} onChange={(e) => handleUpdateItemById('certifications', item.id, 'organization', e.target.value)} className="w-full bg-slate-950 p-2 rounded-xl border border-white/10 text-[10px] text-slate-500" />
-                      </div>
-                      <button onClick={() => handleRemoveById('certifications', item.id)} className="bg-red-500/10 text-red-500 w-10 h-10 rounded-xl hover:bg-red-500 hover:text-white transition-all font-black flex items-center justify-center">×</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
+          )}
+
+          {activeTab === 'guide' && (
+            <section className="bg-slate-950 p-10 rounded-[3rem] border-2 border-teal-500/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h3 className="text-2xl font-black text-teal-400 mb-6">수정한 내용을 영구적으로 저장하는 법</h3>
+              <div className="space-y-6 text-slate-300">
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">1</div>
+                  <p>관리자 페이지에서 원하는 모든 내용(사진, 텍스트 등)을 수정합니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">2</div>
+                  <p>사이드바 하단의 <b>[설정파일 다운로드(TS)]</b> 버튼을 눌러 <b>constants.ts</b> 파일을 받습니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">3</div>
+                  <p>본인 컴퓨터의 프로젝트 폴더에 있는 기존 <b>constants.ts</b> 파일을 다운로드 받은 파일로 <b>교체</b>합니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">4</div>
+                  <p>수정된 파일을 Github에 <b>Commit & Push</b> 하면 Netlify 사이트에 영구적으로 반영됩니다.</p>
+                </div>
+                
+                <div className="mt-10 p-6 bg-white/5 rounded-2xl border border-white/10 italic text-sm">
+                  💡 <b>왜 이렇게 하나요?</b> <br/>
+                  현재 사이트는 서버(DB)가 없는 정적 사이트입니다. 브라우저 저장소(LocalStorage)는 임시적인 공간이므로, 소스 코드 자체를 업데이트해야 전 세계 모든 사람에게 수정된 내용이 보입니다.
+                </div>
+              </div>
+            </section>
           )}
 
           {activeTab === 'portfolio' && (
             <div className="space-y-10 pb-20">
               <button onClick={() => handleAddItem('portfolioItems')} className="w-full py-8 bg-teal-600 text-white font-black rounded-3xl shadow-2xl hover:bg-teal-500 transition-all">+ 새로운 활동 프로젝트 추가</button>
-              <div className="space-y-12">
-                {localData.portfolioItems.map((item, idx) => (
-                  <div key={item.id} className="bg-slate-950 p-10 rounded-[4rem] border border-white/5 shadow-2xl relative">
-                    <button onClick={() => handleRemoveById('portfolioItems', item.id)} className="absolute -top-4 -right-4 w-14 h-14 bg-red-600 text-white rounded-full flex items-center justify-center text-3xl font-black shadow-2xl hover:scale-110 transition-transform">×</button>
-                    <div className="grid grid-cols-2 gap-6 mb-8 pr-10">
-                      <div>
-                        <label className="text-[10px] font-black text-slate-500 mb-2 block uppercase">활동 제목</label>
-                        <input value={item.title} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'title', e.target.value)} className="w-full text-xl font-bold bg-slate-900 p-4 rounded-2xl border border-white/10 outline-none" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-slate-500 mb-2 block uppercase">기간</label>
-                        <input value={item.date} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'date', e.target.value)} className="w-full text-teal-400 font-bold bg-slate-900 p-4 rounded-2xl border border-white/10 outline-none" />
-                      </div>
-                    </div>
-                    <div className="mb-8">
-                      <label className="text-[10px] font-black text-slate-500 mb-2 block uppercase">상세 설명</label>
-                      <textarea value={item.description} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'description', e.target.value)} className="w-full bg-slate-900 p-5 rounded-2xl border border-white/10 text-slate-400 leading-relaxed outline-none" rows={4} />
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <label className="text-[10px] font-black text-slate-500 uppercase">사진 관리 ({item.imageUrls.length})</label>
-                        <button onClick={() => { setActivePortfolioIdx(idx); portfolioInputRef.current?.click(); }} className="text-teal-400 font-bold text-xs hover:underline">+ 사진 추가</button>
-                      </div>
-                      <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                        {item.imageUrls.map((url, imgIdx) => (
-                          <div key={imgIdx} className="relative w-24 h-24 shrink-0 rounded-2xl overflow-hidden group border border-white/10">
-                            <img src={url} className="w-full h-full object-cover" />
-                            <button 
-                              onClick={() => {
-                                setLocalData(prev => {
-                                  const list = [...prev.portfolioItems];
-                                  list[idx].imageUrls = list[idx].imageUrls.filter((_, i) => i !== imgIdx);
-                                  return { ...prev, portfolioItems: list };
-                                });
-                              }}
-                              className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] font-black text-red-400 transition-opacity"
-                            >
-                              삭제
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+              {localData.portfolioItems.map((item, idx) => (
+                <div key={item.id} className="bg-slate-950 p-10 rounded-[4rem] border border-white/5 shadow-2xl relative">
+                  <button onClick={() => handleRemoveById('portfolioItems', item.id)} className="absolute -top-4 -right-4 w-14 h-14 bg-red-600 text-white rounded-full flex items-center justify-center text-3xl font-black shadow-2xl hover:scale-110 transition-transform">×</button>
+                  <input value={item.title} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'title', e.target.value)} className="w-full text-2xl font-bold bg-slate-900 p-4 rounded-2xl border border-white/10 mb-4" />
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="text-xs font-bold text-slate-500">사진 관리 ({item.imageUrls.length})</label>
+                    <button onClick={() => { setActivePortfolioIdx(idx); portfolioInputRef.current?.click(); }} className="text-teal-400 font-bold text-xs">+ 추가</button>
                   </div>
-                ))}
-              </div>
+                  <div className="flex gap-4 overflow-x-auto pb-4">
+                    {item.imageUrls.map((url, i) => (
+                      <div key={i} className="w-24 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                        <img src={url} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
               <input type="file" ref={portfolioInputRef} className="hidden" multiple onChange={(e) => processImageUpload(e, 'portfolio')} />
             </div>
           )}
 
           {activeTab === 'cert-images' && (
             <div className="bg-slate-950 p-12 rounded-[4rem] border border-white/5 shadow-2xl space-y-10">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center">
                 <h3 className="text-2xl font-black">증명서 사본 관리</h3>
-                <button onClick={() => certListInputRef.current?.click()} className="bg-teal-600 px-8 py-4 rounded-3xl font-black shadow-xl">+ 이미지 업로드</button>
+                <button onClick={() => certListInputRef.current?.click()} className="bg-teal-600 px-8 py-4 rounded-3xl font-black">+ 이미지 업로드</button>
                 <input type="file" ref={certListInputRef} className="hidden" multiple onChange={(e) => processImageUpload(e, 'cert-list')} />
               </div>
               <div className="grid grid-cols-3 gap-6">
                 {localData.certificationImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden group border border-white/5">
+                  <div key={idx} className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden border border-white/5">
                     <img src={img} className="w-full h-full object-cover" />
-                    <button 
-                      onClick={() => setLocalData(p => ({...p, certificationImages: p.certificationImages.filter((_, i) => i !== idx)}))}
-                      className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center font-black transition-opacity"
-                    >
-                      제거
-                    </button>
+                    <button onClick={() => setLocalData(p => ({...p, certificationImages: p.certificationImages.filter((_, i) => i !== idx)}))} className="absolute inset-0 bg-red-600/80 text-white opacity-0 hover:opacity-100 flex items-center justify-center font-black">제거</button>
                   </div>
                 ))}
               </div>
@@ -316,11 +246,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
 
         </div>
       </main>
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-      `}</style>
     </div>
   );
 };

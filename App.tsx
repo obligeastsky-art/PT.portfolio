@@ -33,7 +33,12 @@ const App: React.FC = () => {
 
   const handleUpdateData = (newData: ProfileData) => {
     setData(newData);
-    localStorage.setItem('pt_portfolio_data', JSON.stringify(newData));
+    try {
+      localStorage.setItem('pt_portfolio_data', JSON.stringify(newData));
+    } catch (e) {
+      console.warn("LocalStorage storage limit reached. Changes kept in memory but might not persist after refresh if too large.", e);
+      alert("데이터 용량이 너무 커서 브라우저 임시 저장소에 저장하지 못했습니다. 영구 반영 가이드를 따라 소스 코드를 업데이트하세요.");
+    }
   };
 
   if (view === 'admin') {
@@ -83,7 +88,7 @@ const App: React.FC = () => {
                 </svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar text-white">
               {data.certificationImages && data.certificationImages.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {data.certificationImages.map((img, idx) => (

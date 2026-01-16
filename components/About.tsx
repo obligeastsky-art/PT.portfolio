@@ -8,37 +8,43 @@ interface AboutProps {
 
 const About: React.FC<AboutProps> = ({ data }) => {
   return (
-    <section id="about" className="py-24 bg-[#1e3a8a] transition-colors duration-1000 scroll-mt-20">
+    <section id="about" className="py-24 bg-slate-950 transition-colors duration-1000 scroll-mt-20">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
           
           <div className="lg:col-span-5 relative">
-            <div className="aspect-[4/5] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+            {/* 프로필 이미지 박스: 전문성을 위해 정갈한 보더와 깊이감 있는 쉐도우 추가 */}
+            <div className="aspect-[3/4] md:aspect-[4/5] bg-slate-900 rounded-[2rem] overflow-hidden shadow-[0_30px_60px_-12px_rgba(0,0,0,0.7)] border border-white/10 transform hover:scale-[1.01] transition-transform duration-700">
               <img 
-                src={data.profileImageUrl || "https://picsum.photos/seed/doctor/800/1000"} 
-                alt="Profile" 
-                className="w-full h-full object-cover transition-all duration-500 hover:scale-105"
+                src={data.profileImageUrl || "https://picsum.photos/seed/pt-professional/800/1000"} 
+                alt={`${data.name} 물리치료사 프로필`} 
+                className="w-full h-full object-cover object-top"
               />
             </div>
-            <div className="absolute -bottom-6 -right-6 bg-teal-600 p-8 rounded-2xl shadow-xl text-white hidden md:block border border-white/20">
-              <p className="text-sm font-medium opacity-80 mb-1">치료 철학</p>
-              <p className="text-lg font-bold leading-relaxed whitespace-pre-wrap italic">
-                "{data.philosophyHighlight || "환자의 완벽한 복귀가 제 최고의 보람입니다."}"
+            
+            {/* 자격증 요약 태그 (이미지 위 오버레이) */}
+            <div className="absolute -bottom-6 -right-6 bg-teal-600 p-6 md:p-8 rounded-[2rem] shadow-2xl text-white hidden md:block border border-white/20 z-10 backdrop-blur-lg">
+              <p className="text-[10px] font-black opacity-80 mb-2 uppercase tracking-[0.25em]">Therapy Vision</p>
+              <p className="text-lg font-bold leading-tight whitespace-pre-wrap italic">
+                "{data.philosophyHighlight}"
               </p>
             </div>
           </div>
 
-          <div className="lg:col-span-7">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">Professional Philosophy</h2>
-            <p className="text-xl text-blue-100/80 leading-relaxed mb-12 whitespace-pre-wrap">
+          <div className="lg:col-span-7 mt-12 lg:mt-0">
+            <span className="text-teal-400 font-black uppercase tracking-[0.4em] text-xs mb-6 block">Professional Profile</span>
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-10 tracking-tighter leading-[1.1]">
+              환자의 일상을 되찾는<br/>핵심 움직임 전문가
+            </h2>
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-12 whitespace-pre-wrap font-medium">
               {data.philosophy}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
               {data.expertise.map((item, idx) => (
-                <div key={idx} className="p-6 bg-white/5 rounded-2xl text-center border border-white/10 hover:border-teal-400 transition-colors group">
-                  <p className="text-teal-400 text-2xl font-bold mb-1 group-hover:scale-110 transition-transform">{item.value}</p>
-                  <p className="text-blue-200/60 text-sm font-medium">{item.label}</p>
+                <div key={idx} className="p-6 md:p-8 bg-white/5 rounded-[2rem] text-center border border-white/5 hover:border-teal-500/50 hover:bg-white/10 transition-all group cursor-default">
+                  <p className="text-teal-400 text-2xl md:text-3xl font-black mb-1 group-hover:scale-110 transition-transform">{item.value}</p>
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{item.label}</p>
                 </div>
               ))}
             </div>
