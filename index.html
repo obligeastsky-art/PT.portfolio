@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Professional PT Portfolio</title>
+    <title>장동천 물리치료사 포트폴리오</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,23 +13,37 @@
       body {
         font-family: 'Noto Sans KR', sans-serif;
         scroll-behavior: smooth;
+        background-color: #020617; /* slate-950 */
       }
       .bg-navy { background-color: #1e3a8a; }
       .text-navy { color: #1e3a8a; }
       .bg-teal-custom { background-color: #0d9488; }
       .text-teal-custom { color: #0d9488; }
+      
+      /* 초기 로딩 화면 방지 */
+      #root:empty {
+        display: flex;
+        align-items: center;
+        justify-center: center;
+        height: 100vh;
+        background: #020617;
+      }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3"
-  }
-}
-</script>
-</head>
-  <body class="bg-gray-50 text-gray-900">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react-dom": "https://esm.sh/react-dom@^19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client"
+      }
+    }
+    </script>
+  </head>
+  <body class="bg-slate-950 text-white">
     <div id="root"></div>
+    <!-- 모듈 진입점 명시 -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
