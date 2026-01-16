@@ -11,6 +11,7 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
   const [localData, setLocalData] = useState<ProfileData>(() => JSON.parse(JSON.stringify(data)));
   const [activeTab, setActiveTab] = useState<'general' | 'credentials' | 'portfolio' | 'cert-images' | 'guide'>('general');
+  const [copyFeedback, setCopyFeedback] = useState(false);
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
@@ -19,14 +20,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
 
   const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-  const handleRemoveById = (section: keyof ProfileData, id: string) => {
-    if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
+  const handleUpdateItemById = (section: string, id: string, field: string, value: string) => {
     setLocalData(prev => {
-      const currentList = prev[section];
-      if (Array.isArray(currentList)) {
-        return { ...prev, [section]: currentList.filter((item: any) => item.id !== id) };
-      }
-      return prev;
+      const list = [...(prev[section as keyof ProfileData] as any[])];
+      const targetIdx = list.findIndex(item => item.id === id);
+      if (targetIdx !== -1) list[targetIdx] = { ...list[targetIdx], [field]: value };
+      return { ...prev, [section]: list };
     });
   };
 
@@ -41,12 +40,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     setLocalData(prev => ({ ...prev, [section]: [newItem, ...(prev[section] as any[])] }));
   };
 
-  const handleUpdateItemById = (section: string, id: string, field: string, value: string) => {
+  const handleRemoveById = (section: keyof ProfileData, id: string) => {
+    if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
     setLocalData(prev => {
-      const list = [...(prev[section as keyof ProfileData] as any[])];
-      const targetIdx = list.findIndex(item => item.id === id);
-      if (targetIdx !== -1) list[targetIdx] = { ...list[targetIdx], [field]: value };
-      return { ...prev, [section]: list };
+      const currentList = prev[section];
+      if (Array.isArray(currentList)) {
+        return { ...prev, [section]: currentList.filter((item: any) => item.id !== id) };
+      }
+      return prev;
     });
   };
 
@@ -80,14 +81,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     }
   };
 
-  const downloadJson = () => {
-    const dataStr = "export const INITIAL_DATA = " + JSON.stringify(localData, null, 2) + ";";
-    const dataUri = 'data:application/javascript;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'constants.ts';
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+  const copyCodeToClipboard = () => {
+    const fullCode = `import { ProfileData } from './types';\n\nexport const INITIAL_DATA: ProfileData = ${JSON.stringify(localData, null, 2)};`;
+    navigator.clipboard.writeText(fullCode).then(() => {
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 3000);
+    });
   };
 
   return (
@@ -114,15 +113,49 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
           ))}
         </nav>
         <div className="p-6 border-t border-white/5 space-y-3">
-          <button onClick={() => { onUpdate(localData); alert('브라우저에 임시 저장되었습니다.\n영구 반영을 위해 가이드 탭을 확인하세요!'); }} className="w-full py-4 bg-teal-500 text-white font-black rounded-2xl hover:bg-teal-400 active:scale-95 transition-all shadow-xl">임시 저장</button>
-          <button onClick={downloadJson} className="w-full py-3 bg-white/5 text-teal-400 border border-teal-500/20 text-xs font-black rounded-xl hover:bg-teal-500 hover:text-white transition-all">설정파일 다운로드(TS)</button>
-          <button onClick={onClose} className="w-full py-2 text-slate-500 text-xs font-bold hover:text-white transition-colors">닫기</button>
+          <button 
+            onClick={copyCodeToClipboard} 
+            className={`w-full py-4 ${copyFeedback ? 'bg-green-600' : 'bg-teal-500'} text-white font-black rounded-2xl hover:bg-teal-400 transition-all shadow-xl flex flex-col items-center justify-center`}
+          >
+            <span className="text-sm">{copyFeedback ? '복사 완료!' : 'GitHub용 코드 복사'}</span>
+            {!copyFeedback && <span className="text-[10px] opacity-70">웹에서 바로 수정 가능</span>}
+          </button>
+          <button onClick={onClose} className="w-full py-2 text-slate-500 text-xs font-bold hover:text-white transition-colors">돌아가기</button>
         </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto p-12 bg-slate-900">
         <div className="max-w-4xl mx-auto space-y-10">
           
+          {activeTab === 'guide' && (
+            <section className="bg-slate-950 p-10 rounded-[3rem] border-2 border-teal-500/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h3 className="text-2xl font-black text-teal-400 mb-6 tracking-tighter">컴퓨터에 폴더가 없어도 괜찮습니다!</h3>
+              <div className="space-y-6 text-slate-300">
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">1</div>
+                  <p>여기서 사진과 내용을 모두 수정하고 왼쪽 하단의 <b>[GitHub용 코드 복사]</b> 버튼을 누릅니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">2</div>
+                  <p>본인의 <b>GitHub 사이트</b>로 가서 <b>constants.ts</b> 파일을 엽니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">3</div>
+                  <p>연필 아이콘(Edit)을 누르고, 기존 내용을 <b>전부 지운 뒤 복사한 코드를 붙여넣기</b> 하세요.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">4</div>
+                  <p><b>Commit changes...</b> 버튼을 누르면 Netlify가 알아서 사이트를 새로 만들어줍니다.</p>
+                </div>
+                
+                <div className="mt-10 p-8 bg-white/5 rounded-[2rem] border border-white/10 italic text-sm leading-relaxed">
+                  💡 <b>왜 이렇게 하나요?</b> <br/>
+                  내용을 소스 코드(GitHub)에 직접 넣어야만 전 세계 누구나 접속했을 때 수정된 내용이 보이기 때문입니다. 지금 복사하는 코드는 사진 데이터까지 모두 포함하고 있어 아주 강력합니다.
+                </div>
+              </div>
+            </section>
+          )}
+
           {activeTab === 'general' && (
             <section className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl space-y-8">
               <h3 className="text-xl font-black mb-4">프로필 기본 설정</h3>
@@ -150,6 +183,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
             </section>
           )}
 
+          {/* ... Other tabs (credentials, portfolio, cert-images) ... */}
           {activeTab === 'credentials' && (
              <div className="space-y-12">
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5">
@@ -171,35 +205,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTab === 'guide' && (
-            <section className="bg-slate-950 p-10 rounded-[3rem] border-2 border-teal-500/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-2xl font-black text-teal-400 mb-6">수정한 내용을 영구적으로 저장하는 법</h3>
-              <div className="space-y-6 text-slate-300">
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">1</div>
-                  <p>관리자 페이지에서 원하는 모든 내용(사진, 텍스트 등)을 수정합니다.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">2</div>
-                  <p>사이드바 하단의 <b>[설정파일 다운로드(TS)]</b> 버튼을 눌러 <b>constants.ts</b> 파일을 받습니다.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">3</div>
-                  <p>본인 컴퓨터의 프로젝트 폴더에 있는 기존 <b>constants.ts</b> 파일을 다운로드 받은 파일로 <b>교체</b>합니다.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">4</div>
-                  <p>수정된 파일을 Github에 <b>Commit & Push</b> 하면 Netlify 사이트에 영구적으로 반영됩니다.</p>
-                </div>
-                
-                <div className="mt-10 p-6 bg-white/5 rounded-2xl border border-white/10 italic text-sm">
-                  💡 <b>왜 이렇게 하나요?</b> <br/>
-                  현재 사이트는 서버(DB)가 없는 정적 사이트입니다. 브라우저 저장소(LocalStorage)는 임시적인 공간이므로, 소스 코드 자체를 업데이트해야 전 세계 모든 사람에게 수정된 내용이 보입니다.
-                </div>
-              </div>
-            </section>
           )}
 
           {activeTab === 'portfolio' && (

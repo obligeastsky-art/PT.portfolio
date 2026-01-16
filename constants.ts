@@ -3,7 +3,7 @@ import { ProfileData } from './types';
 
 export const INITIAL_DATA: ProfileData = {
   name: "장동천",
-  // 사용자가 업로드한 사진을 profile.jpg로 저장한다고 가정합니다.
+  // 기본 이미지 경로. 관리자 페이지에서 사진을 업로드한 후 '코드 복사'를 하면 이 경로 대신 실제 이미지 데이터가 들어갑니다.
   profileImageUrl: "./profile.jpg",
   headline: "움직임에 확신을 더하는\n물리치료사 장동천",
   subHeadline: "서울의료원 물리치료사 | KPNFA 학술 부장 및 실기 강사 | 이학석사(M.S.)",
