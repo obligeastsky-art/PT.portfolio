@@ -36,25 +36,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     if (section === 'experience') newItem = { id: newId, year: '2024-현재', title: '새로운 경력', description: '업무 내용을 입력하세요.' };
     else if (section === 'education') newItem = { id: newId, year: '2024', degree: '학위 명칭', institution: '교육 기관' };
     else if (section === 'certifications') newItem = { id: newId, date: '2024.01', title: '자격 명칭', organization: '발행 기관' };
-    else if (section === 'portfolioItems') newItem = { id: newId, category: 'academic', title: '활동 제목', description: '활동 상세 설명', imageUrls: [], date: '2024' };
+    else if (section === 'portfolioItems') newItem = { id: newId, category: 'project', title: '새로운 활동 제목', description: '활동에 대한 상세 설명을 입력하세요.', imageUrls: [], date: '2024.01' };
     else if (section === 'expertise') newItem = { label: '새 지표', value: '0' };
 
     setLocalData(prev => ({ ...prev, [section]: [newItem, ...(prev[section] as any[])] }));
   };
 
-  const handleRemoveById = (section: keyof ProfileData, idOrIdx: string | number) => {
+  // ID가 있는 항목 삭제 (Portfolio, Experience, Education, Certifications)
+  const handleRemoveById = (e: React.MouseEvent, section: keyof ProfileData, id: string) => {
+    e.stopPropagation();
     if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
     setLocalData(prev => {
-      const currentList = prev[section];
-      if (Array.isArray(currentList)) {
-        if (typeof idOrIdx === 'string') {
-          return { ...prev, [section]: currentList.filter((item: any) => item.id !== idOrIdx) };
-        } else {
-          return { ...prev, [section]: currentList.filter((_, i) => i !== idOrIdx) };
-        }
+      const list = prev[section];
+      if (Array.isArray(list)) {
+        return { 
+          ...prev, 
+          [section]: list.filter((item: any) => item.id !== id) 
+        };
       }
       return prev;
     });
+  };
+
+  // 인덱스 기반 삭제 (Expertise 전용)
+  const handleRemoveExpertise = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
+    setLocalData(prev => ({
+      ...prev,
+      expertise: prev.expertise.filter((_, i) => i !== index)
+    }));
   };
 
   const handleUpdateExpertise = (index: number, field: 'label' | 'value', value: string) => {
@@ -191,8 +202,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                   {localData.expertise.map((item, idx) => (
                     <div key={idx} className="bg-slate-900 p-6 rounded-2xl border border-white/5 space-y-3 relative group">
                       <button 
-                        onClick={() => handleRemoveById('expertise', idx)} 
-                        className="absolute top-2 right-2 w-6 h-6 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => handleRemoveExpertise(e, idx)} 
+                        className="absolute top-2 right-2 w-6 h-6 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       >
                         ×
                       </button>
@@ -221,7 +232,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
 
           {activeTab === 'credentials' && (
              <div className="space-y-12">
-              <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5">
+              <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-black">경력 사항</h3>
                   <button onClick={() => handleAddItem('experience')} className="bg-teal-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-teal-500">+ 추가</button>
@@ -229,7 +240,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                 <div className="space-y-4">
                   {localData.experience.map((item) => (
                     <div key={item.id} className="relative p-6 bg-slate-900 rounded-2xl border border-white/5 group">
-                      <button onClick={() => handleRemoveById('experience', item.id)} className="absolute top-4 right-4 bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-black">×</button>
+                      <button onClick={(e) => handleRemoveById(e, 'experience', item.id)} className="absolute top-4 right-4 bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-black z-10">×</button>
                       <div className="grid grid-cols-4 gap-4 mb-3">
                         <input value={item.year} onChange={(e) => handleUpdateItemById('experience', item.id, 'year', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-bold" />
                         <input value={item.title} onChange={(e) => handleUpdateItemById('experience', item.id, 'title', e.target.value)} className="col-span-3 bg-slate-950 p-3 rounded-xl border border-white/10 font-bold" />
@@ -246,29 +257,79 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
             <div className="space-y-10">
               <button onClick={() => handleAddItem('portfolioItems')} className="w-full py-8 bg-teal-600 text-white font-black rounded-3xl shadow-2xl hover:bg-teal-500 transition-all">+ 새로운 활동 프로젝트 추가</button>
               {localData.portfolioItems.map((item, idx) => (
-                <div key={item.id} className="bg-slate-950 p-10 rounded-[4rem] border border-white/5 shadow-2xl relative">
-                  <button onClick={() => handleRemoveById('portfolioItems', item.id)} className="absolute -top-4 -right-4 w-14 h-14 bg-red-600 text-white rounded-full flex items-center justify-center text-3xl font-black shadow-2xl hover:scale-110 transition-transform">×</button>
-                  <input value={item.title} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'title', e.target.value)} className="w-full text-2xl font-bold bg-slate-900 p-4 rounded-2xl border border-white/10 mb-4" />
-                  <div className="flex justify-between items-center mb-4">
-                    <label className="text-xs font-bold text-slate-500">사진 관리 ({item.imageUrls.length})</label>
-                    <button onClick={() => { setActivePortfolioIdx(idx); portfolioInputRef.current?.click(); }} className="text-teal-400 font-bold text-xs">+ 추가</button>
+                <div key={item.id} className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl relative space-y-6">
+                  {/* 포트폴리오 항목 삭제 버튼 */}
+                  <button 
+                    onClick={(e) => handleRemoveById(e, 'portfolioItems', item.id)} 
+                    className="absolute -top-4 -right-4 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-2xl hover:scale-110 transition-transform z-20 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">활동 제목</label>
+                      <input value={item.title} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'title', e.target.value)} className="w-full text-lg font-bold bg-slate-900 p-4 rounded-2xl border border-white/10 focus:border-teal-500 outline-none" placeholder="활동 제목을 입력하세요" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">연도 / 날짜</label>
+                      <input value={item.date} onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'date', e.target.value)} className="w-full text-lg font-bold bg-slate-900 p-4 rounded-2xl border border-white/10 focus:border-teal-500 outline-none text-teal-400" placeholder="2024.01" />
+                    </div>
                   </div>
-                  <div className="flex gap-4 overflow-x-auto pb-4">
-                    {item.imageUrls.map((url, i) => (
-                      <div key={i} className="w-24 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 border border-white/10 relative group/img">
-                        <img src={url} className="w-full h-full object-cover" />
-                        <button 
-                          onClick={() => {
-                            const newItems = [...localData.portfolioItems];
-                            newItems[idx].imageUrls = newItems[idx].imageUrls.filter((_, imgIdx) => imgIdx !== i);
-                            setLocalData({...localData, portfolioItems: newItems});
-                          }}
-                          className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-xs font-bold"
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    ))}
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">카테고리</label>
+                    <select 
+                      value={item.category} 
+                      onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'category', e.target.value)} 
+                      className="w-full bg-slate-900 p-4 rounded-2xl border border-white/10 focus:border-teal-500 outline-none font-bold"
+                    >
+                      <option value="academic">학술 / 강연 (Academic)</option>
+                      <option value="content">콘텐츠 / 저술 (Content)</option>
+                      <option value="community">커뮤니티 (Community)</option>
+                      <option value="project">프로젝트 (Project)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">상세 설명</label>
+                    <textarea 
+                      value={item.description} 
+                      onChange={(e) => handleUpdateItemById('portfolioItems', item.id, 'description', e.target.value)} 
+                      className="w-full bg-slate-900 p-4 rounded-2xl border border-white/10 focus:border-teal-500 outline-none text-slate-300 leading-relaxed" 
+                      rows={4} 
+                      placeholder="활동에 대한 상세한 내용을 입력하세요..."
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">활동 사진 관리 ({item.imageUrls.length})</label>
+                      <button onClick={() => { setActivePortfolioIdx(idx); portfolioInputRef.current?.click(); }} className="bg-white/5 px-4 py-2 rounded-xl text-teal-400 font-black text-xs hover:bg-white/10 transition-colors border border-white/5">+ 사진 추가</button>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-teal-900 scrollbar-track-transparent">
+                      {item.imageUrls.map((url, i) => (
+                        <div key={i} className="w-24 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 border border-white/10 relative group/img shadow-lg">
+                          <img src={url} className="w-full h-full object-cover" />
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newItems = [...localData.portfolioItems];
+                              newItems[idx].imageUrls = newItems[idx].imageUrls.filter((_, imgIdx) => imgIdx !== i);
+                              setLocalData({...localData, portfolioItems: newItems});
+                            }}
+                            className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-xs font-black transition-opacity"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                      {item.imageUrls.length === 0 && (
+                        <div className="w-full py-10 border-2 border-dashed border-white/5 rounded-2xl flex items-center justify-center text-slate-600 text-xs font-bold uppercase tracking-widest">
+                          등록된 사진이 없습니다
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -285,9 +346,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
               </div>
               <div className="grid grid-cols-3 gap-6">
                 {localData.certificationImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden border border-white/5 group">
+                  <div key={idx} className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden border border-white/5 group shadow-xl">
                     <img src={img} className="w-full h-full object-cover" />
-                    <button onClick={() => setLocalData(p => ({...p, certificationImages: p.certificationImages.filter((_, i) => i !== idx)}))} className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center font-black">제거</button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocalData(p => ({...p, certificationImages: p.certificationImages.filter((_, i) => i !== idx)}));
+                      }} 
+                      className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center font-black transition-opacity"
+                    >
+                      제거
+                    </button>
                   </div>
                 ))}
               </div>
