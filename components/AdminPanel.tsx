@@ -35,7 +35,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     let newItem: any;
     if (section === 'experience') newItem = { id: newId, year: '2024-현재', title: '새로운 경력', description: '업무 내용을 입력하세요.' };
     else if (section === 'education') newItem = { id: newId, year: '2024', degree: '학위 명칭', institution: '교육 기관' };
-    else if (section === 'certifications') newItem = { id: newId, date: '2024.01', title: '자격 명칭', organization: '발행 기관' };
+    else if (section === 'certifications') newItem = { id: newId, date: '2024.01.01', title: '자격 명칭', organization: '발행 기관' };
     else if (section === 'portfolioItems') newItem = { id: newId, category: 'project', title: '새로운 활동 제목', description: '활동에 대한 상세 설명을 입력하세요.', imageUrls: [], date: '2024.01' };
     else if (section === 'expertise') newItem = { label: '새 지표', value: '0' };
 
@@ -164,7 +164,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
       </aside>
 
       <main className="flex-1 overflow-y-auto p-12 bg-slate-900">
-        <div className="max-w-4xl mx-auto space-y-10 pb-20">
+        <div className="max-w-4xl mx-auto space-y-10 pb-20 text-white">
           
           {activeTab === 'general' && (
             <div className="space-y-10">
@@ -232,6 +232,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
 
           {activeTab === 'credentials' && (
              <div className="space-y-12">
+              {/* 경력 사항 섹션 */}
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-black">경력 사항</h3>
@@ -242,10 +243,54 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                     <div key={item.id} className="relative p-6 bg-slate-900 rounded-2xl border border-white/5 group">
                       <button onClick={(e) => handleRemoveById(e, 'experience', item.id)} className="absolute top-4 right-4 bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-black z-10">×</button>
                       <div className="grid grid-cols-4 gap-4 mb-3">
-                        <input value={item.year} onChange={(e) => handleUpdateItemById('experience', item.id, 'year', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-bold" />
-                        <input value={item.title} onChange={(e) => handleUpdateItemById('experience', item.id, 'title', e.target.value)} className="col-span-3 bg-slate-950 p-3 rounded-xl border border-white/10 font-bold" />
+                        <input value={item.year} onChange={(e) => handleUpdateItemById('experience', item.id, 'year', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-bold" placeholder="기간 (예: 2024-현재)" />
+                        <input value={item.title} onChange={(e) => handleUpdateItemById('experience', item.id, 'title', e.target.value)} className="col-span-3 bg-slate-950 p-3 rounded-xl border border-white/10 font-bold" placeholder="직함 / 소속" />
                       </div>
-                      <textarea value={item.description} onChange={(e) => handleUpdateItemById('experience', item.id, 'description', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-slate-400 text-sm" rows={2} />
+                      <textarea value={item.description} onChange={(e) => handleUpdateItemById('experience', item.id, 'description', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-slate-400 text-sm" rows={2} placeholder="상세 내용" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 학업 사항 섹션 */}
+              <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black">학업 사항</h3>
+                  <button onClick={() => handleAddItem('education')} className="bg-teal-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-teal-500">+ 추가</button>
+                </div>
+                <div className="space-y-4">
+                  {localData.education.map((item) => (
+                    <div key={item.id} className="relative p-6 bg-slate-900 rounded-2xl border border-white/5 group">
+                      <button onClick={(e) => handleRemoveById(e, 'education', item.id)} className="absolute top-4 right-4 bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-black z-10">×</button>
+                      <div className="grid grid-cols-4 gap-4">
+                        <input value={item.year} onChange={(e) => handleUpdateItemById('education', item.id, 'year', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-bold" placeholder="연도 (예: 2024)" />
+                        <div className="col-span-3 space-y-2">
+                          <input value={item.degree} onChange={(e) => handleUpdateItemById('education', item.id, 'degree', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 font-bold" placeholder="학위 명칭" />
+                          <input value={item.institution} onChange={(e) => handleUpdateItemById('education', item.id, 'institution', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-sm text-slate-400" placeholder="교육 기관" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 면허 및 자격 섹션 */}
+              <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black">면허 및 자격</h3>
+                  <button onClick={() => handleAddItem('certifications')} className="bg-orange-600 px-5 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-orange-500">+ 추가</button>
+                </div>
+                <div className="space-y-4">
+                  {localData.certifications.map((item) => (
+                    <div key={item.id} className="relative p-6 bg-slate-900 rounded-2xl border border-white/5 group">
+                      <button onClick={(e) => handleRemoveById(e, 'certifications', item.id)} className="absolute top-4 right-4 bg-red-500/10 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-black z-10">×</button>
+                      <div className="grid grid-cols-4 gap-4">
+                        <input value={item.date} onChange={(e) => handleUpdateItemById('certifications', item.id, 'date', e.target.value)} className="bg-slate-950 p-3 rounded-xl border border-white/10 text-orange-400 font-bold" placeholder="날짜 (예: 2024.01.01)" />
+                        <div className="col-span-3 space-y-2">
+                          <input value={item.title} onChange={(e) => handleUpdateItemById('certifications', item.id, 'title', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 font-bold" placeholder="자격 명칭" />
+                          <input value={item.organization} onChange={(e) => handleUpdateItemById('certifications', item.id, 'organization', e.target.value)} className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-sm text-slate-400" placeholder="발행 기관" />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
