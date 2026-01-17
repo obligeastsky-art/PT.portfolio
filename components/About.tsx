@@ -13,7 +13,7 @@ const About: React.FC<AboutProps> = ({ data }) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
           
           <div className="lg:col-span-5 relative">
-            {/* 프로필 이미지 박스: 전문성을 위해 정갈한 보더와 깊이감 있는 쉐도우 추가 */}
+            {/* 프로필 이미지 박스 */}
             <div className="aspect-[3/4] md:aspect-[4/5] bg-slate-900 rounded-[2rem] overflow-hidden shadow-[0_30px_60px_-12px_rgba(0,0,0,0.7)] border border-white/10 transform hover:scale-[1.01] transition-transform duration-700">
               <img 
                 src={data.profileImageUrl || "https://picsum.photos/seed/pt-professional/800/1000"} 
@@ -40,11 +40,11 @@ const About: React.FC<AboutProps> = ({ data }) => {
               {data.philosophy}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-5">
               {data.expertise.map((item, idx) => (
-                <div key={idx} className="p-6 md:p-8 bg-white/5 rounded-[2rem] text-center border border-white/5 hover:border-teal-500/50 hover:bg-white/10 transition-all group cursor-default">
-                  <p className="text-teal-400 text-2xl md:text-3xl font-black mb-1 group-hover:scale-110 transition-transform">{item.value}</p>
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{item.label}</p>
+                <div key={idx} className="p-5 md:p-6 bg-white/5 rounded-[1.5rem] text-center border border-white/5 hover:border-teal-500/50 hover:bg-white/10 transition-all group cursor-default flex flex-col justify-center min-h-[100px]">
+                  <p className="text-teal-400 text-xl md:text-2xl font-black mb-1 group-hover:scale-105 transition-transform tracking-tight">{item.value}</p>
+                  <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.15em] leading-tight">{item.label}</p>
                 </div>
               ))}
             </div>

@@ -12,6 +12,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
   const [localData, setLocalData] = useState<ProfileData>(() => JSON.parse(JSON.stringify(data)));
   const [activeTab, setActiveTab] = useState<'general' | 'credentials' | 'portfolio' | 'cert-images' | 'guide'>('general');
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState(false);
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
@@ -29,25 +30,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     });
   };
 
-  const handleAddItem = (section: 'experience' | 'education' | 'certifications' | 'portfolioItems') => {
+  const handleAddItem = (section: 'experience' | 'education' | 'certifications' | 'portfolioItems' | 'expertise') => {
     const newId = generateUniqueId(section);
     let newItem: any;
     if (section === 'experience') newItem = { id: newId, year: '2024-현재', title: '새로운 경력', description: '업무 내용을 입력하세요.' };
     else if (section === 'education') newItem = { id: newId, year: '2024', degree: '학위 명칭', institution: '교육 기관' };
     else if (section === 'certifications') newItem = { id: newId, date: '2024.01', title: '자격 명칭', organization: '발행 기관' };
     else if (section === 'portfolioItems') newItem = { id: newId, category: 'academic', title: '활동 제목', description: '활동 상세 설명', imageUrls: [], date: '2024' };
+    else if (section === 'expertise') newItem = { label: '새 지표', value: '0' };
 
     setLocalData(prev => ({ ...prev, [section]: [newItem, ...(prev[section] as any[])] }));
   };
 
-  const handleRemoveById = (section: keyof ProfileData, id: string) => {
+  const handleRemoveById = (section: keyof ProfileData, idOrIdx: string | number) => {
     if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
     setLocalData(prev => {
       const currentList = prev[section];
       if (Array.isArray(currentList)) {
-        return { ...prev, [section]: currentList.filter((item: any) => item.id !== id) };
+        if (typeof idOrIdx === 'string') {
+          return { ...prev, [section]: currentList.filter((item: any) => item.id !== idOrIdx) };
+        } else {
+          return { ...prev, [section]: currentList.filter((_, i) => i !== idOrIdx) };
+        }
       }
       return prev;
+    });
+  };
+
+  const handleUpdateExpertise = (index: number, field: 'label' | 'value', value: string) => {
+    setLocalData(prev => {
+      const newList = [...prev.expertise];
+      newList[index] = { ...newList[index], [field]: value };
+      return { ...prev, expertise: newList };
     });
   };
 
@@ -81,6 +95,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     }
   };
 
+  const handleSaveToSite = () => {
+    onUpdate(localData);
+    setSaveFeedback(true);
+    setTimeout(() => setSaveFeedback(false), 2000);
+  };
+
   const copyCodeToClipboard = () => {
     const fullCode = `import { ProfileData } from './types';\n\nexport const INITIAL_DATA: ProfileData = ${JSON.stringify(localData, null, 2)};`;
     navigator.clipboard.writeText(fullCode).then(() => {
@@ -95,9 +115,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
         <div className="p-8 border-b border-white/5">
           <h2 className="text-xl font-black text-teal-400 tracking-tighter uppercase">Portfolio CMS</h2>
         </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto text-sm">
           {[
-            { id: 'general', label: '기본 브랜딩' },
+            { id: 'general', label: '기본 브랜딩 (지표 수정)' },
             { id: 'credentials', label: '경력 / 학업 / 자격' },
             { id: 'portfolio', label: '프로젝트 활동' },
             { id: 'cert-images', label: '증명서 사본' },
@@ -114,76 +134,91 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
         </nav>
         <div className="p-6 border-t border-white/5 space-y-3">
           <button 
+            onClick={handleSaveToSite}
+            className={`w-full py-4 ${saveFeedback ? 'bg-green-600' : 'bg-white text-slate-950'} font-black rounded-2xl transition-all shadow-xl active:scale-95 flex flex-col items-center justify-center`}
+          >
+            <span className="text-sm">{saveFeedback ? '저장 완료!' : '사이트에 즉시 저장'}</span>
+            {!saveFeedback && <span className="text-[10px] opacity-70">현재 브라우저 전용</span>}
+          </button>
+          
+          <button 
             onClick={copyCodeToClipboard} 
             className={`w-full py-4 ${copyFeedback ? 'bg-green-600' : 'bg-teal-500'} text-white font-black rounded-2xl hover:bg-teal-400 transition-all shadow-xl flex flex-col items-center justify-center`}
           >
             <span className="text-sm">{copyFeedback ? '복사 완료!' : 'GitHub용 코드 복사'}</span>
-            {!copyFeedback && <span className="text-[10px] opacity-70">웹에서 바로 수정 가능</span>}
+            {!copyFeedback && <span className="text-[10px] opacity-70">영구 저장용</span>}
           </button>
           <button onClick={onClose} className="w-full py-2 text-slate-500 text-xs font-bold hover:text-white transition-colors">돌아가기</button>
         </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto p-12 bg-slate-900">
-        <div className="max-w-4xl mx-auto space-y-10">
+        <div className="max-w-4xl mx-auto space-y-10 pb-20">
           
-          {activeTab === 'guide' && (
-            <section className="bg-slate-950 p-10 rounded-[3rem] border-2 border-teal-500/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-2xl font-black text-teal-400 mb-6 tracking-tighter">컴퓨터에 폴더가 없어도 괜찮습니다!</h3>
-              <div className="space-y-6 text-slate-300">
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">1</div>
-                  <p>여기서 사진과 내용을 모두 수정하고 왼쪽 하단의 <b>[GitHub용 코드 복사]</b> 버튼을 누릅니다.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">2</div>
-                  <p>본인의 <b>GitHub 사이트</b>로 가서 <b>constants.ts</b> 파일을 엽니다.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">3</div>
-                  <p>연필 아이콘(Edit)을 누르고, 기존 내용을 <b>전부 지운 뒤 복사한 코드를 붙여넣기</b> 하세요.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">4</div>
-                  <p><b>Commit changes...</b> 버튼을 누르면 Netlify가 알아서 사이트를 새로 만들어줍니다.</p>
-                </div>
-                
-                <div className="mt-10 p-8 bg-white/5 rounded-[2rem] border border-white/10 italic text-sm leading-relaxed">
-                  💡 <b>왜 이렇게 하나요?</b> <br/>
-                  내용을 소스 코드(GitHub)에 직접 넣어야만 전 세계 누구나 접속했을 때 수정된 내용이 보이기 때문입니다. 지금 복사하는 코드는 사진 데이터까지 모두 포함하고 있어 아주 강력합니다.
-                </div>
-              </div>
-            </section>
-          )}
-
           {activeTab === 'general' && (
-            <section className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl space-y-8">
-              <h3 className="text-xl font-black mb-4">프로필 기본 설정</h3>
-              <div className="flex gap-8 items-start">
-                <div className="w-32 h-40 bg-slate-800 rounded-2xl overflow-hidden relative group shrink-0 border border-white/10">
-                  <img src={localData.profileImageUrl} className="w-full h-full object-cover" />
-                  <button onClick={() => profileInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold transition-opacity">변경</button>
-                  <input type="file" ref={profileInputRef} className="hidden" onChange={(e) => processImageUpload(e, 'profile')} />
-                </div>
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">메인 헤드라인</label>
-                    <textarea name="headline" value={localData.headline} onChange={handleInputChange} className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 outline-none focus:border-teal-500 text-lg font-bold" rows={2} />
+            <div className="space-y-10">
+              <section className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl space-y-8">
+                <h3 className="text-xl font-black mb-4">프로필 기본 설정</h3>
+                <div className="flex gap-8 items-start">
+                  <div className="w-32 h-40 bg-slate-800 rounded-2xl overflow-hidden relative group shrink-0 border border-white/10">
+                    <img src={localData.profileImageUrl} className="w-full h-full object-cover" />
+                    <button onClick={() => profileInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold transition-opacity">변경</button>
+                    <input type="file" ref={profileInputRef} className="hidden" onChange={(e) => processImageUpload(e, 'profile')} />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">상세 소속 및 직함</label>
-                    <input name="subHeadline" value={localData.subHeadline} onChange={handleInputChange} className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 outline-none focus:border-teal-500" />
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">메인 헤드라인</label>
+                      <textarea name="headline" value={localData.headline} onChange={handleInputChange} className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 outline-none focus:border-teal-500 text-lg font-bold" rows={2} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">상세 소속 및 직함</label>
+                      <input name="subHeadline" value={localData.subHeadline} onChange={handleInputChange} className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 outline-none focus:border-teal-500" />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">치료 철학</label>
-                <textarea name="philosophy" value={localData.philosophy} onChange={handleInputChange} className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 outline-none focus:border-teal-500 leading-relaxed" rows={4} />
-              </div>
-            </section>
+                <div>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">치료 철학</label>
+                  <textarea name="philosophy" value={localData.philosophy} onChange={handleInputChange} className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 outline-none focus:border-teal-500 leading-relaxed" rows={4} />
+                </div>
+              </section>
+
+              <section className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-xl font-black">프로필 핵심 지표 (Box 내용)</h3>
+                  <button onClick={() => handleAddItem('expertise')} className="bg-teal-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-teal-500 transition-colors">+ 추가</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {localData.expertise.map((item, idx) => (
+                    <div key={idx} className="bg-slate-900 p-6 rounded-2xl border border-white/5 space-y-3 relative group">
+                      <button 
+                        onClick={() => handleRemoveById('expertise', idx)} 
+                        className="absolute top-2 right-2 w-6 h-6 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block">라벨 (예: 임상 경력)</label>
+                        <input 
+                          value={item.label} 
+                          onChange={(e) => handleUpdateExpertise(idx, 'label', e.target.value)} 
+                          className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block">수치 (예: 6년+)</label>
+                        <input 
+                          value={item.value} 
+                          onChange={(e) => handleUpdateExpertise(idx, 'value', e.target.value)} 
+                          className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-black"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
           )}
 
-          {/* ... Other tabs (credentials, portfolio, cert-images) ... */}
           {activeTab === 'credentials' && (
              <div className="space-y-12">
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5">
@@ -208,7 +243,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
           )}
 
           {activeTab === 'portfolio' && (
-            <div className="space-y-10 pb-20">
+            <div className="space-y-10">
               <button onClick={() => handleAddItem('portfolioItems')} className="w-full py-8 bg-teal-600 text-white font-black rounded-3xl shadow-2xl hover:bg-teal-500 transition-all">+ 새로운 활동 프로젝트 추가</button>
               {localData.portfolioItems.map((item, idx) => (
                 <div key={item.id} className="bg-slate-950 p-10 rounded-[4rem] border border-white/5 shadow-2xl relative">
@@ -220,8 +255,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                   </div>
                   <div className="flex gap-4 overflow-x-auto pb-4">
                     {item.imageUrls.map((url, i) => (
-                      <div key={i} className="w-24 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                      <div key={i} className="w-24 h-24 bg-slate-800 rounded-xl overflow-hidden shrink-0 border border-white/10 relative group/img">
                         <img src={url} className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => {
+                            const newItems = [...localData.portfolioItems];
+                            newItems[idx].imageUrls = newItems[idx].imageUrls.filter((_, imgIdx) => imgIdx !== i);
+                            setLocalData({...localData, portfolioItems: newItems});
+                          }}
+                          className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-xs font-bold"
+                        >
+                          삭제
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -240,13 +285,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
               </div>
               <div className="grid grid-cols-3 gap-6">
                 {localData.certificationImages.map((img, idx) => (
-                  <div key={idx} className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden border border-white/5">
+                  <div key={idx} className="relative aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden border border-white/5 group">
                     <img src={img} className="w-full h-full object-cover" />
-                    <button onClick={() => setLocalData(p => ({...p, certificationImages: p.certificationImages.filter((_, i) => i !== idx)}))} className="absolute inset-0 bg-red-600/80 text-white opacity-0 hover:opacity-100 flex items-center justify-center font-black">제거</button>
+                    <button onClick={() => setLocalData(p => ({...p, certificationImages: p.certificationImages.filter((_, i) => i !== idx)}))} className="absolute inset-0 bg-red-600/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center font-black">제거</button>
                   </div>
                 ))}
               </div>
             </div>
+          )}
+
+          {activeTab === 'guide' && (
+            <section className="bg-slate-950 p-10 rounded-[3rem] border-2 border-teal-500/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h3 className="text-2xl font-black text-teal-400 mb-6 tracking-tighter">컴퓨터에 폴더가 없어도 괜찮습니다!</h3>
+              <div className="space-y-6 text-slate-300">
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">1</div>
+                  <p>여기서 사진과 내용을 모두 수정하고 왼쪽 하단의 <b>[GitHub용 코드 복사]</b> 버튼을 누릅니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">2</div>
+                  <p>본인의 <b>GitHub 사이트</b>로 가서 <b>constants.ts</b> 파일을 엽니다.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">3</div>
+                  <p>연필 아이콘(Edit)을 누르고, 기존 내용을 <b>전부 지운 뒤 복사한 코드를 붙여넣기</b> 하세요.</p>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">4</div>
+                  <p><b>Commit changes...</b> 버튼을 누르면 Netlify가 알아서 사이트를 새로 만들어줍니다.</p>
+                </div>
+              </div>
+            </section>
           )}
 
         </div>
