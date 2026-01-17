@@ -43,7 +43,7 @@ const About: React.FC<AboutProps> = ({ data }) => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-5">
               {data.expertise.map((item, idx) => (
                 <div key={idx} className="p-5 md:p-6 bg-white/5 rounded-[1.5rem] text-center border border-white/5 hover:border-teal-500/50 hover:bg-white/10 transition-all group cursor-default flex flex-col justify-center min-h-[100px]">
-                  <p className="text-teal-400 text-xl md:text-2xl font-black mb-1 group-hover:scale-105 transition-transform tracking-tight">{item.value}</p>
+                  <p className="text-teal-400 text-xl md:text-2xl font-black mb-1 group-hover:scale-105 transition-transform tracking-tight whitespace-pre-wrap leading-tight">{item.value}</p>
                   <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.15em] leading-tight">{item.label}</p>
                 </div>
               ))}

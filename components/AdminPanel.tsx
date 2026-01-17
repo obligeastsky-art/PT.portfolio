@@ -216,11 +216,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                         />
                       </div>
                       <div>
-                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block">수치 (예: 6년+)</label>
-                        <input 
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block">수치 (줄바꿈 가능)</label>
+                        <textarea 
                           value={item.value} 
                           onChange={(e) => handleUpdateExpertise(idx, 'value', e.target.value)} 
-                          className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-black"
+                          className="w-full bg-slate-950 p-3 rounded-xl border border-white/10 text-teal-400 font-black leading-tight"
+                          rows={2}
                         />
                       </div>
                     </div>
