@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ProfileData, PortfolioItem, ExperienceItem, EducationItem, CertificationItem } from '../types';
 
 interface AdminPanelProps {
@@ -13,13 +13,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'credentials' | 'portfolio' | 'cert-images' | 'guide'>('general');
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState(false);
+  const [totalSize, setTotalSize] = useState(0);
   
   const profileInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
   const certListInputRef = useRef<HTMLInputElement>(null);
   const [activePortfolioIdx, setActivePortfolioIdx] = useState<number | null>(null);
 
+  // 데이터 용량 계산 (MB 단위)
+  useEffect(() => {
+    const size = new Blob([JSON.stringify(localData)]).size;
+    setTotalSize(Number((size / 1024 / 1024).toFixed(2)));
+  }, [localData]);
+
   const generateUniqueId = (prefix: string) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+  // 이미지 압축 및 리사이징 엔진
+  const optimizeImage = (base64Str: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        // JPEG로 압축하여 용량 대폭 절감
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+    });
+  };
 
   const handleUpdateItemById = (section: string, id: string, field: string, value: string) => {
     setLocalData(prev => {
@@ -42,23 +74,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
     setLocalData(prev => ({ ...prev, [section]: [newItem, ...(prev[section] as any[])] }));
   };
 
-  // ID가 있는 항목 삭제 (Portfolio, Experience, Education, Certifications)
   const handleRemoveById = (e: React.MouseEvent, section: keyof ProfileData, id: string) => {
     e.stopPropagation();
     if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
     setLocalData(prev => {
       const list = prev[section];
       if (Array.isArray(list)) {
-        return { 
-          ...prev, 
-          [section]: list.filter((item: any) => item.id !== id) 
-        };
+        return { ...prev, [section]: list.filter((item: any) => item.id !== id) };
       }
       return prev;
     });
   };
 
-  // 인덱스 기반 삭제 (Expertise 전용)
   const handleRemoveExpertise = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     if (!window.confirm('정말 이 항목을 삭제하시겠습니까?')) return;
@@ -84,26 +111,33 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
   const processImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profile' | 'cert-list' | 'portfolio') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+    
     const readFile = (file: File) => new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = (ev) => resolve(ev.target?.result as string);
       reader.readAsDataURL(file);
     });
 
+    const optimizedImages = await Promise.all(
+      Array.from(files).map(async (file) => {
+        const rawBase64 = await readFile(file);
+        return await optimizeImage(rawBase64);
+      })
+    );
+
     if (type === 'profile') {
-      const base64 = await readFile(files[0]);
-      setLocalData(prev => ({ ...prev, profileImageUrl: base64 }));
+      setLocalData(prev => ({ ...prev, profileImageUrl: optimizedImages[0] }));
     } else if (type === 'cert-list') {
-      const newImages = await Promise.all(Array.from(files).map(f => readFile(f)));
-      setLocalData(prev => ({ ...prev, certificationImages: [...prev.certificationImages, ...newImages] }));
+      setLocalData(prev => ({ ...prev, certificationImages: [...prev.certificationImages, ...optimizedImages] }));
     } else if (type === 'portfolio' && activePortfolioIdx !== null) {
-      const newImages = await Promise.all(Array.from(files).map(f => readFile(f)));
       setLocalData(prev => {
         const items = [...prev.portfolioItems];
-        items[activePortfolioIdx].imageUrls = [...items[activePortfolioIdx].imageUrls, ...newImages];
+        items[activePortfolioIdx].imageUrls = [...items[activePortfolioIdx].imageUrls, ...optimizedImages];
         return { ...prev, portfolioItems: items };
       });
     }
+    // 인풋 초기화
+    e.target.value = '';
   };
 
   const handleSaveToSite = () => {
@@ -113,10 +147,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
   };
 
   const copyCodeToClipboard = () => {
+    if (totalSize > 15) {
+      alert(`현재 데이터 용량이 ${totalSize}MB로 너무 큽니다. 사진 개수를 줄이거나 더 작은 사진을 사용해주세요. (15MB 이하 권장)`);
+      return;
+    }
     const fullCode = `import { ProfileData } from './types';\n\nexport const INITIAL_DATA: ProfileData = ${JSON.stringify(localData, null, 2)};`;
     navigator.clipboard.writeText(fullCode).then(() => {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 3000);
+    }).catch(err => {
+      console.error("복사 실패:", err);
+      alert("데이터가 너무 커서 복사에 실패했습니다. 사진을 몇 장 지우고 다시 시도해주세요.");
     });
   };
 
@@ -125,6 +166,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
       <aside className="w-72 bg-slate-950 border-r border-white/5 flex flex-col shrink-0">
         <div className="p-8 border-b border-white/5">
           <h2 className="text-xl font-black text-teal-400 tracking-tighter uppercase">Portfolio CMS</h2>
+          <div className="mt-2 flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${totalSize > 10 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              Data Size: {totalSize} MB
+            </span>
+          </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto text-sm">
           {[
@@ -173,8 +220,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                 <div className="flex gap-8 items-start">
                   <div className="w-32 h-40 bg-slate-800 rounded-2xl overflow-hidden relative group shrink-0 border border-white/10">
                     <img src={localData.profileImageUrl} className="w-full h-full object-cover" />
-                    <button onClick={() => profileInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold transition-opacity">변경</button>
-                    <input type="file" ref={profileInputRef} className="hidden" onChange={(e) => processImageUpload(e, 'profile')} />
+                    <button onClick={() => profileInputRef.current?.click()} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold transition-opacity">변경 (자동압축)</button>
+                    <input type="file" ref={profileInputRef} className="hidden" accept="image/*" onChange={(e) => processImageUpload(e, 'profile')} />
                   </div>
                   <div className="flex-1 space-y-4">
                     <div>
@@ -233,7 +280,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
 
           {activeTab === 'credentials' && (
              <div className="space-y-12">
-              {/* 경력 사항 섹션 */}
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-black">경력 사항</h3>
@@ -253,7 +299,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                 </div>
               </div>
 
-              {/* 학업 사항 섹션 */}
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-black">학업 사항</h3>
@@ -275,7 +320,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                 </div>
               </div>
 
-              {/* 면허 및 자격 섹션 */}
               <div className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-xl font-black">면허 및 자격</h3>
@@ -304,7 +348,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
               <button onClick={() => handleAddItem('portfolioItems')} className="w-full py-8 bg-teal-600 text-white font-black rounded-3xl shadow-2xl hover:bg-teal-500 transition-all">+ 새로운 활동 프로젝트 추가</button>
               {localData.portfolioItems.map((item, idx) => (
                 <div key={item.id} className="bg-slate-950 p-10 rounded-[3rem] border border-white/5 shadow-2xl relative space-y-6">
-                  {/* 포트폴리오 항목 삭제 버튼 */}
                   <button 
                     onClick={(e) => handleRemoveById(e, 'portfolioItems', item.id)} 
                     className="absolute -top-4 -right-4 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-2xl hover:scale-110 transition-transform z-20 cursor-pointer"
@@ -351,7 +394,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">활동 사진 관리 ({item.imageUrls.length})</label>
-                      <button onClick={() => { setActivePortfolioIdx(idx); portfolioInputRef.current?.click(); }} className="bg-white/5 px-4 py-2 rounded-xl text-teal-400 font-black text-xs hover:bg-white/10 transition-colors border border-white/5">+ 사진 추가</button>
+                      <button onClick={() => { setActivePortfolioIdx(idx); portfolioInputRef.current?.click(); }} className="bg-white/5 px-4 py-2 rounded-xl text-teal-400 font-black text-xs hover:bg-white/10 transition-colors border border-white/5">+ 사진 추가 (자동 최적화)</button>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-teal-900 scrollbar-track-transparent">
                       {item.imageUrls.map((url, i) => (
@@ -379,7 +422,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                   </div>
                 </div>
               ))}
-              <input type="file" ref={portfolioInputRef} className="hidden" multiple onChange={(e) => processImageUpload(e, 'portfolio')} />
+              <input type="file" ref={portfolioInputRef} className="hidden" accept="image/*" multiple onChange={(e) => processImageUpload(e, 'portfolio')} />
             </div>
           )}
 
@@ -387,8 +430,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
             <div className="bg-slate-950 p-12 rounded-[4rem] border border-white/5 shadow-2xl space-y-10">
               <div className="flex justify-between items-center">
                 <h3 className="text-2xl font-black">증명서 사본 관리</h3>
-                <button onClick={() => certListInputRef.current?.click()} className="bg-teal-600 px-8 py-4 rounded-3xl font-black">+ 이미지 업로드</button>
-                <input type="file" ref={certListInputRef} className="hidden" multiple onChange={(e) => processImageUpload(e, 'cert-list')} />
+                <button onClick={() => certListInputRef.current?.click()} className="bg-teal-600 px-8 py-4 rounded-3xl font-black">+ 이미지 업로드 (자동최적화)</button>
+                <input type="file" ref={certListInputRef} className="hidden" accept="image/*" multiple onChange={(e) => processImageUpload(e, 'cert-list')} />
               </div>
               <div className="grid grid-cols-3 gap-6">
                 {localData.certificationImages.map((img, idx) => (
@@ -411,11 +454,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
 
           {activeTab === 'guide' && (
             <section className="bg-slate-950 p-10 rounded-[3rem] border-2 border-teal-500/30 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-2xl font-black text-teal-400 mb-6 tracking-tighter">컴퓨터에 폴더가 없어도 괜찮습니다!</h3>
+              <h3 className="text-2xl font-black text-teal-400 mb-6 tracking-tighter">데이터 용량 관련 안내</h3>
               <div className="space-y-6 text-slate-300">
+                <p>이미지 압축 엔진이 자동으로 작동하여 고화질 사진을 최적화하지만, 그럼에도 수십 장의 사진을 올리면 <b>GitHub 복사 시 오류</b>가 날 수 있습니다.</p>
+                <p>현재 데이터 크기가 <b>10MB 이상</b>이라면 불필요한 사진을 삭제하시는 것을 권장합니다.</p>
+                <hr className="border-white/5" />
+                <h4 className="text-xl font-bold">영구 저장 방법</h4>
                 <div className="flex gap-4 items-start">
                   <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">1</div>
-                  <p>여기서 사진과 내용을 모두 수정하고 왼쪽 하단의 <b>[GitHub용 코드 복사]</b> 버튼을 누릅니다.</p>
+                  <p>수정을 마친 뒤 왼쪽 하단의 <b>[GitHub용 코드 복사]</b> 버튼을 누릅니다.</p>
                 </div>
                 <div className="flex gap-4 items-start">
                   <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">2</div>
@@ -423,11 +470,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ data, onUpdate, onClose }) => {
                 </div>
                 <div className="flex gap-4 items-start">
                   <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">3</div>
-                  <p>연필 아이콘(Edit)을 누르고, 기존 내용을 <b>전부 지운 뒤 복사한 코드를 붙여넣기</b> 하세요.</p>
-                </div>
-                <div className="flex gap-4 items-start">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-slate-900 flex items-center justify-center font-black shrink-0">4</div>
-                  <p><b>Commit changes...</b> 버튼을 누르면 Netlify가 알아서 사이트를 새로 만들어줍니다.</p>
+                  <p>기존 내용을 <b>전부 지운 뒤 복사한 코드를 붙여넣기</b> 하고 <b>Commit changes...</b>를 누르세요.</p>
                 </div>
               </div>
             </section>
